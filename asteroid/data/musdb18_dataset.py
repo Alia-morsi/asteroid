@@ -4,6 +4,7 @@ import random
 import torch
 import tqdm
 import soundfile as sf
+import copy
 
 
 class MUSDB18Dataset(torch.utils.data.Dataset):
@@ -168,11 +169,28 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
 
         # apply linear mix over source index=0
         audio_mix = torch.stack(list(audio_sources.values())).sum(0)
+
+        ## changes: Modified targets. What we define as sources become the targets. Don't get confused.
         if self.targets:
-            audio_sources = torch.stack(
-                [wav for src, wav in audio_sources.items() if src in self.targets], dim=0
-            )
-        return audio_mix, audio_sources
+            covered_targets = []
+            sources_list = []
+            for target in self.targets:
+                if target in audio_sources:
+                    covered_targets.append(target)
+                    sources_list.append(audio_sources[target])
+            
+            # changes: since there is only one everything else target, we will just assume this is to be built.
+            # changes: perhaps this is bad, but I will delete from the dictionary since it's a local object..
+            for target in covered_targets:
+                audio_sources.pop(target)
+
+            # sum the targets that weren't covered.
+            everything_else = torch.stack(list(audio_sources.values())).sum(0)
+            sources_list.append(everything_else)
+
+            stacked_audio_sources = torch.stack(sources_list, dim=0)
+
+        return audio_mix, stacked_audio_sources
 
     def __len__(self):
         return len(self.tracks) * self.samples_per_track

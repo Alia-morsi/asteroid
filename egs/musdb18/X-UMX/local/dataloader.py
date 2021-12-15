@@ -40,7 +40,7 @@ def load_datasets(parser, args):
     train_dataset = MUSDB18Dataset(
         split="train",
         sources=args.sources,
-        targets=args.sources,
+        targets=args.targets,
         source_augmentations=source_augmentations,
         random_track_mix=True,
         segment=args.seq_dur,
@@ -55,7 +55,7 @@ def load_datasets(parser, args):
         split="train",
         subset=validation_tracks,
         sources=args.sources,
-        targets=args.sources,
+        targets=args.targets,
         segment=None,
         **dataset_kwargs,
     )

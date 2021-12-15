@@ -1,6 +1,6 @@
 # Training config
 training:
-  epochs: 1000
+  epochs: 2
   batch_size: 14
   loss_combine_sources: yes
   loss_use_multidomain: yes
@@ -31,6 +31,11 @@ data:
     - drums
     - vocals
     - other
+# Should we train one target at a time, or train all the models together (i.e vocals + everything else, guitar + everything else, etc)
+  targets:
+    - drums
+    - everything
+
 # Network config
 model:
   pretrained: null

@@ -332,6 +332,7 @@ class XUMXManager(System):
     ):
         config["data"].pop("sources")
         config["data"].pop("source_augmentations")
+        config["data"].pop("targets")
         super().__init__(model, optimizer, loss_func, train_loader, val_loader, scheduler, config)
         self.val_dur_samples = model.sample_rate * val_dur
 

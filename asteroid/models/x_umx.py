@@ -155,12 +155,25 @@ class XUMX(BaseModel):
             time_signals (torch.Tensor): estimated time signals of shape $(sources, batch_size, channels, time_length)$ if `return_time_signals` is `True`
         """
         # Transform
+        ## Maybe the change notes I have here are even not necessary, and we should just make it a 4 channel wav?
+        ## Or just make a tweak to the encoder to fix the dimensionality of the mixture.
+        ## I think I prefer to use the branch approach so as not to cause confusions on what parameters mean (channels etc)
         mixture, ang = self.encoder(wav)
+        
+        ## CHANGE_NOTES
+        ## 1 and 2: Make another mixture from the backing track (or should we just concatenate the wav files?)
 
+        ## 1 and 2: pass both masks to the forward masker
         # Estimate masks
+        ## The returned masks should only be appied to full mix tracks only, but we will need to have
+        ## 1. Mask for main_source
+        ## 2. Mask for backing track
+        ## 3. In the future: Mask for Noise.
+
         est_masks = self.forward_masker(mixture.clone())
 
         # Apply masks to mixture
+        # 1 and 2: Run this once for each mask
         masked_mixture = self.apply_masks(mixture, est_masks)
 
         # Inverse Transform
