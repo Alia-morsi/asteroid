@@ -3,21 +3,16 @@ import torch
 from pathlib import Path
 
 validation_tracks = [
-    "Actions - One Minute Smile",
-    "Clara Berry And Wooldog - Waltz For My Victims",
-    "Johnny Lokke - Promises & Lies",
-    "Patrick Talbot - A Reason To Leave",
-    "Triviul - Angelsaint",
-    "Alexander Ross - Goodbye Bolero",
-    "Fergessen - Nos Palpitants",
-    "Leaf - Summerghost",
-    "Skelpolu - Human Mistakes",
-    "Young Griffo - Pennies",
-    "ANiMAL - Rockshow",
-    "James May - On The Line",
-    "Meaxic - Take A Step",
-    "Traffic Experiment - Sirens",
-]
+    "A Classic Education - NightOwl",       
+    "Fergessen - The Wind",                       
+    "Music Delta - Rock",
+    "Actions - Devil's Words",              
+    "Flags - 54",                                 
+    "North To Alaska - All The Same",
+    "Actions - South Of The Water",         
+    "Giselle - Moss",                             
+    "Patrick Talbot - Set Me Free"
+    ]
 
 
 def load_datasets(parser, args):
