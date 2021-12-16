@@ -461,7 +461,7 @@ def main(conf, args):
         callbacks=callbacks,
         default_root_dir=exp_dir,
         gpus=gpus,
-        distributed_backend=distributed_backend,
+        #distributed_backend=distributed_backend,
         limit_train_batches=1.0,  # Useful for fast experiment
     )
     trainer.fit(system)
