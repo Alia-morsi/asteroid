@@ -2,8 +2,8 @@
 training:
   epochs: 2
   batch_size: 14
-  loss_combine_sources: yes
-  loss_use_multidomain: yes
+  loss_combine_sources: no
+  loss_use_multidomain: no
   mix_coef: 10.0
   val_dur: 80.0
 # Optim config
