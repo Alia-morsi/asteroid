@@ -99,8 +99,8 @@ class System(pl.LightningModule):
         """
         inputs, targets = batch
 
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
 
         est_targets = self(inputs)
         loss = self.loss_func(est_targets, targets)

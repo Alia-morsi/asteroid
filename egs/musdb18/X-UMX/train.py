@@ -402,7 +402,7 @@ def main(conf, args):
         hidden_size=args.hidden_size,
         in_chan=args.in_chan,
         n_hop=args.nhop,
-        sources=args.sources,
+        sources=args.targets,
         max_bin=max_bin,
         bidirectional=args.bidirectional,
         sample_rate=train_dataset.sample_rate,
