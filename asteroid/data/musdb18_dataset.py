@@ -1,5 +1,6 @@
 from pathlib import Path
 import torch.utils.data
+import torchaudio
 import random
 import torch
 import tqdm
@@ -167,6 +168,7 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
             audio = self.source_augmentations(audio)
             audio_sources[source] = audio
 
+
         # apply linear mix over source index=0
         audio_mix = torch.stack(list(audio_sources.values())).sum(0)
 
@@ -175,7 +177,7 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
             covered_targets = []
             sources_list = []
             for target in self.targets:
-                if target in audio_sources:
+                if target in audio_sources: # so that the absence of 'everything else' from sources doesn't cause a crash
                     covered_targets.append(target)
                     sources_list.append(audio_sources[target])
             
@@ -186,10 +188,26 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
 
             # sum the targets that weren't covered.
             everything_else = torch.stack(list(audio_sources.values())).sum(0)
+
             sources_list.append(everything_else)
-
             stacked_audio_sources = torch.stack(sources_list, dim=0)
+            
+            #at this point, sources_list should have the same items in self.targets
+            # and we can write as:
+            # torchaudio.save('{}.wav'.format(self.targets[0]), sources_list[0], self.sample_rate). etc
 
+            #convolve as follows: audio mix = Room * ( Speaker * everything_else + target instrument )
+
+            #Adding noise as a target will be considered in the future, which would require stacked_audio_sources to include the noise used
+            # to make the mix, and of course would require us to append the noise targets to what is in the conf file.
+            
+
+            #write the audio to some file.
+            #torchaudio.save(filepath:'everythingelse.wav', src: stacked_audio_sources[0] , sample_rate: self.sample_rate)
+            
+            import pdb
+            pdb.set_trace()
+            
         return audio_mix, stacked_audio_sources
 
     def __len__(self):
