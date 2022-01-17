@@ -14,10 +14,14 @@ optim:
   lr_decay_patience: 80
   lr_decay_gamma: 0.3
   weight_decay: 0.00001
-# Data config
+# Data config. Change values of irs_1_dir and irs_2_dir to your local ones.
 data:
   train_dir: ./data
   output: x-umx_outputs
+  irs_1: Aachen Impulse Response Dataset
+  irs_1_dir: /home/alia/Documents/datasets/AIR_1_4
+  irs_2: Room Impulse Response and Noise Database
+  irs_2_dir: /home/alia/Documents/datasets/Room Impulse Response and Noise Database 
   sample_rate: 44100
   num_workers: 4
   seed: 42
