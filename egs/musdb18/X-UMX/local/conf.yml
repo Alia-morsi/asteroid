@@ -30,6 +30,7 @@ data:
   source_augmentations:
     - gain
     - channelswap
+    - ir_conv
   sources:
     - bass
     - drums
