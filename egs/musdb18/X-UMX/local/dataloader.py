@@ -29,11 +29,11 @@ def load_datasets(parser, args):
 
     args = parser.parse_args()
 
-    #here the ir paths should be loaded, and either we Compose a source_augmentations object
-    # or we create a __call__ on the transformations class as in the provided example
+    ir_paths = {'irs_metadata': Path(args.irs_metadata), args.irs_1: Path(args.irs_1_dir), args.irs_2: Path(args.irs_2_dir)}
 
     dataset_kwargs = {
         "root": Path(args.train_dir),
+        "ir_paths" : ir_paths 
     }
 
     source_augmentations = Compose(
@@ -110,5 +110,7 @@ def _augment_channelswap(audio):
     return audio
 
 #here, we must add the augmentations we want, which are the noise additions. 
-def _augment_ir_conv(audio, ir_file):
-    return audio
+#def _augment_ir_conv(audio, ir_info='', purpose='train'):
+#    """ Apply noise convolutions to the audio depending on the purpose. ir_info leads to a csv with the irs to be used for train vs test vs validation, and we filter for a relevant ir depending on the purpose"""
+
+#    return audio
