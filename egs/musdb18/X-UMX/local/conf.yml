@@ -27,9 +27,10 @@ data:
   seed: 42
   seq_dur: 6.0
   samples_per_track: 64
-  source_augmentations:
+  general_augmentations:
     - gain
     - channelswap
+  train_augmentations:
     - ir_conv
   sources:
     - bass
