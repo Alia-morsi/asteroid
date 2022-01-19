@@ -29,6 +29,9 @@ def load_datasets(parser, args):
 
     args = parser.parse_args()
 
+    #here the ir paths should be loaded, and either we Compose a source_augmentations object
+    # or we create a __call__ on the transformations class as in the provided example
+
     dataset_kwargs = {
         "root": Path(args.train_dir),
     }
@@ -104,4 +107,8 @@ def _augment_channelswap(audio):
     if audio.shape[0] == 2 and torch.FloatTensor(1).uniform_() < 0.5:
         return torch.flip(audio, [0])
 
+    return audio
+
+#here, we must add the augmentations we want, which are the noise additions. 
+def _augment_ir_conv(audio, ir_file):
     return audio
