@@ -36,11 +36,17 @@ class TransformNeuralfp:
             # Gain(),
             # Mp3Compression()
             ])
-    def irconv(self, x, p):
+        
+    def irconv(self, x, p): #function modified to only take .wav files. But this inefficient approach is just to get started
         ir_dir = self.ir_dir
         if random.random() < p:
             r1 = random.randrange(len(os.listdir(ir_dir)))
-            fpath = os.path.join(ir_dir, os.listdir(ir_dir)[r1])
+            fpath = os.path.join(ir_dir, os.listdir(ir_dir)[r1]) 
+        
+            while not fpath.endswith('.wav'):
+                r1 = random.randrange(len(os.listdir(ir_dir)))
+                fpath = os.path.join(ir_dir, os.listdir(ir_dir)[r1])
+
             x_ir, fs = librosa.load(fpath, sr=None)
             fftLength = np.maximum(len(x), len(x_ir))
             X = np.fft.fft(x, n=fftLength)

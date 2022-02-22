@@ -17,7 +17,7 @@ optim:
 # Data config. Change values of irs_1_dir and irs_2_dir to your local ones.
 data:
   train_dir: ./data
-  irs_metadata: irs.csv
+  irs_metadata: /home/alia/Documents/projects/leakage_removal/asteroid/egs/musdb18/X-UMX/local/irs.csv
   output: x-umx_outputs
   irs_1: Aachen Impulse Response Dataset
   irs_1_dir: /home/alia/Documents/datasets/AIR_1_4
@@ -28,11 +28,10 @@ data:
   seed: 42
   seq_dur: 6.0
   samples_per_track: 64
-  general_augmentations:
+  source_augmentations:
     - gain
     - channelswap
-  train_augmentations:
-    - ir_conv
+  leakage_removal: True
   sources:
     - bass
     - drums

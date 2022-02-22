@@ -29,12 +29,13 @@ def load_datasets(parser, args):
 
     args = parser.parse_args()
 
-    ir_paths = {'irs_metadata': Path(args.irs_metadata), args.irs_1: Path(args.irs_1_dir), args.irs_2: Path(args.irs_2_dir)}
-
     dataset_kwargs = {
         "root": Path(args.train_dir),
-        "ir_paths" : ir_paths 
     }
+
+    if args.leakage_removal:
+        dataset_kwargs['ir_paths'] = {'irs_metadata': Path(args.irs_metadata), args.irs_1: Path(args.irs_1_dir), args.irs_2: Path(args.irs_2_dir)}
+        dataset_kwargs['leakage_removal'] = True
 
     source_augmentations = Compose(
         [globals()["_augment_" + aug] for aug in args.source_augmentations]

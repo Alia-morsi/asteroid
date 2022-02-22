@@ -6,7 +6,39 @@ import torch
 import tqdm
 import soundfile as sf
 import copy
+from scipy import signal
 
+#additions for the ir convolutions
+import pandas as pd
+import librosa
+import numpy as np
+
+
+def apply_ir(ir_paths, x):
+    #maybe here I should make some choice based on a better random, because this will have the same path everytime
+    # x is from sf.read and not librosa.load, but by the time it gets passed to this function is should have been already transposed and put in torch.audio 
+
+    random_index = random.randint(0, len(ir_paths))
+    ir_path = ir_paths[random_index]
+
+    while(not ir_path.suffixes[-1] == '.wav'): #this could also be causing slowness
+        ir_path = ir_paths[random.randint(0, len(ir_paths))]
+    
+    x_ir, fs = librosa.load(ir_path, sr=44100)
+    fftLength = np.maximum(x.shape[1], len(x_ir))
+    
+    X = signal.stft(x, fs, nperseg)
+    
+    #X = np.fft.fft(x, n=fftLength)
+    #X_ir = np.fft.fft(x_ir, n=fftLength)
+    #x_aug = np.fft.ifft(np.multiply(X_ir, X))[0:x.shape[1]].real
+
+    if np.max(np.abs(x_aug)) == 0:
+        pass
+    else:
+        x_aug = x_aug/np.max(np.abs(x_aug)) #Max Normalize)
+
+    return x_aug.astype(np.float32)
 
 class MUSDB18Dataset(torch.utils.data.Dataset):
     """MUSDB18 music separation dataset
@@ -96,6 +128,8 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
     def __init__(
         self,
         root,
+        ir_paths=None,
+        leakage_removal=False,
         sources=["vocals", "bass", "drums", "other"],
         targets=None,
         suffix=".wav",
@@ -110,6 +144,8 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
     ):
 
         self.root = Path(root).expanduser()
+        self.ir_paths = ir_paths #this will be processed by the load_irs function
+        self.leakage_removal = leakage_removal
         self.split = split
         self.sample_rate = sample_rate
         self.segment = segment
@@ -122,6 +158,7 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
         self.subset = subset
         self.samples_per_track = samples_per_track
         self.tracks = list(self.get_tracks())
+        self.irs = list(self.get_irs())
         if not self.tracks:
             raise RuntimeError("No tracks found.")
 
@@ -169,7 +206,7 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
             audio_sources[source] = audio
 
 
-        # apply linear mix over source index=0
+        # apply linear mix over source index=0. Will be commented out because for adding irs, we'll calculate the mix from target and everything else
         audio_mix = torch.stack(list(audio_sources.values())).sum(0)
 
         ## changes: Modified targets. What we define as sources become the targets. Don't get confused.
@@ -189,10 +226,19 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
             # sum the targets that weren't covered.
             everything_else = torch.stack(list(audio_sources.values())).sum(0)
 
+            #at this point, sources_list should have everything as in self.targets
+
+            if self.leakage_removal:
+                #replace the pre-computed audio_mix with: ir(everything_else) + sum(everything in sources list)
+                everything_else = torch.tensor(apply_ir(self.irs, everything_else), dtype=torch.float)
+                audio_mix = torch.stack(sources_list + [everything_else]).sum(0)
+                #note that we didn't need to transpose everything_else before changing it to a torch tensor because in librosa, the dimensionality is (2, lenthaudio) as opposed to sf which is the reverse.
+
             sources_list.append(everything_else)
+
+            #sources_list has each of the targets, and one entry for everything else
             stacked_audio_sources = torch.stack(sources_list, dim=0)
             
-            #at this point, sources_list should have the same items in self.targets
             # and we can write as:
             # torchaudio.save('{}.wav'.format(self.targets[0]), sources_list[0], self.sample_rate). etc
 
@@ -205,8 +251,8 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
             #write the audio to some file.
             #torchaudio.save(filepath:'everythingelse.wav', src: stacked_audio_sources[0] , sample_rate: self.sample_rate)
             
-            import pdb
-            pdb.set_trace()
+            #import pdb
+            #pdb.set_trace()
             
         return audio_mix, stacked_audio_sources
 
@@ -240,6 +286,21 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
                         yield ({"path": track_path, "min_duration": min_duration})
                 else:
                     yield ({"path": track_path, "min_duration": None})
+
+    def get_irs(self):
+        """ Loads the impulse responses. Currently there is nothing random about the ir selection """
+        irs_df = pd.read_csv(self.ir_paths['irs_metadata'])
+        irs_df = irs_df.fillna('')
+
+        #get the irs marked relevant to the current split
+        relevant_irs_df = irs_df[irs_df['split'] == self.split]
+
+        for index, ir_row in relevant_irs_df.iterrows():
+            #add exception handling here, in case ir_paths doesn't have ir_row['Dataset']
+            local_root =  self.ir_paths[ir_row['Dataset']]
+            filepath = Path(local_root, ir_row['relative_path'], ir_row['Filename'])
+            yield (filepath)
+
 
     def get_infos(self):
         """Get dataset infos (for publishing models).
