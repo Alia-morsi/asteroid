@@ -14,6 +14,8 @@ import os
 import pandas as pd
 import librosa
 import numpy as np
+import torchaudio.functional.filtering as taf
+from functools import partial
 
 '''
     Folder Structure:
@@ -25,19 +27,27 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 
+
+def filter_factory(variant, args):
+#   #TODO: args should taken from the config file. but for now we'll probably pass them from the calling function.
+    #TODO: put more sensible cutoff frequency ranges.
+    #this function should return a filter function depending on the input, and should set the parameters so that we would just need to pass in the audio on these returned functions
+    return partial(taf.lowpass_bisquad, sample_rate=44100, cutoff_freq=10000)
+
+
 def apply_ir(ir_paths, x):
     #maybe here I should make some choice based on a better random, because this will have the same path everytime
     # x is from sf.read and not librosa.load, but by the time it gets passed to this function is should have been already transposed and put in torch.audio 
-
+	
     random_index = random.randint(0, len(ir_paths))
     ir_path = ir_paths[random_index]
 
     while(not ir_path.suffixes[-1] == '.wav'): #this could also be causing slowness
         ir_path = ir_paths[random.randint(0, len(ir_paths))]
 
-    x_ir, fs = librosa.load(ir_path, sr=44100)
+    room_ir, fs = librosa.load(ir_path, sr=44100) #The Room IR is loaded as Mono
 
-    x_ir = torch.tensor(x_ir, dtype=torch.float)
+    room_ir = torch.tensor(x_ir, dtype=torch.float)
 
     #convert x_ir into stereo
     x_ir = torch.vstack([x_ir, x_ir])
@@ -86,10 +96,60 @@ class MUSDB18LeakageDataGenerator():
         self.samples_per_track = samples_per_track
         self.split = split
         self.tracks = list(self.get_tracks())
-        self.irs = list(self.get_irs())
+        #self.speaker_irs = list(self.get_irs('speaker'))
+        self.room_and_mic_irs = list(self.get_irs('room_and_mic')
+        #self.filter_irs = list(self.get_irs('filter'))
         if not self.tracks:
             raise RuntimeError("No tracks found.")
 
+
+    def process_audio(self, snr, filter_func, audio_mix, clean_backing_track, audio_sources, targets_list, covered_targets):
+    	#filter the backing track to give a sense of the loudspeaker
+    	processed_backing_track = filter_func(clean_backing_track)
+    	
+    	#sum the targets (excluding the everything else target)
+    	stacked_targets = torch.stack(targets_list, dim=0)
+    	
+    	#append the targets to backing track with an SnR
+    	min_length = np.min([processed_backing_track.shape[1], stacked_targets.shape[1]]) 
+    	stacked_targets = torch.narrow(stacked_targets, 1, 0, min_length)
+    	processed_backing_track = torch.narrow(processed_backing_track, 1, 0, min_length)
+    	
+    	processed_audio_mix = (put the snr function from marius)
+    	
+    	#convolve the full mix with a room+mic ir
+    	processed_audio_mix, ir_info = apply_ir(self.room_and_mic_irs, processed_audio_mix) 
+    	    
+     	#find the shortest audio length on dimension 1 and crop all to be at that length. Since all stems are the same size, we just use audio_sources[0]
+     	#min_length = np.min([targets_list[0].shape[1], convolved_backing_track.shape[1]])
+
+        #should do another round of narrowing after making the convolution with the ir, so that all stems and outputs etc are the same length
+     	min_length = np.min([processed_audio_mix.shape[1], stacked_targets.shape[1], targets_list[0].shape[1]])
+     	for i in range(0, len(targets_list)):
+            targets_list[i] = torch.narrow(targets_list[i], 1, 0, min_length)
+            
+        everything_else = torch.narrow(processed_backing_track, 1, 0, min_length) #should be attenuated relative to the SnR we did 
+         
+         
+     	#replace the pre-computed audio_mix with: ir(everything_else) + sum(everything in sources list)
+     	#everything_else = torch.tensor(apply_ir(self.irs, clean_backing_track), dtype=torch.float)
+
+     	targets_list.append(everything_else) #everything else added after targets_list is used to calc the mix
+     	covered_targets.append('everything_else')
+
+     	#now targets_list has each of the targets, and one entry for everything else
+        stacked_targets = torch.stack(targets_list, dim=0)
+
+        # and we can write as:
+        # torchaudio.save('{}.wav'.format(self.targets[0]), sources_list[0], self.sample_rate). etc
+
+        #convolve as follows: audio mix = Room * ( Speaker * everything_else + target instrument )
+
+        #Adding noise as a target will be considered in the future, which would require stacked_audio_sources to include the noise used
+        # to make the mix, and of course would require us to append the noise targets to what is in the conf file.
+        
+        return stacked_targets, covered_targets, processed_audio_mix, ir_info
+        
     def generate_track(self, track_id):
         #unlike the dataloader, here index will refer to the number of the song.
         audio_sources = {}
@@ -108,49 +168,22 @@ class MUSDB18LeakageDataGenerator():
         audio_mix = torch.stack(list(audio_sources.values())).sum(0)
 
         if self.targets:
-            covered_targets = [] # meaning, targets that are already processed
+            covered_targets = [] # meaning, targets that are already processed. String array
             targets_list = []   
             for target in self.targets: # if target is an instrument, remove from audio_sources and keep track of it
                 if target in audio_sources: 
                     covered_targets.append(target)
                     targets_list.append(audio_sources[target])
 
+            #remove the targets from audio_sources. So that audio_sources has the backing track stems, and targets_list has the target stems
             for target in covered_targets:
                 audio_sources.pop(target)
 
             # sum the targets that weren't covered.
             clean_backing_track = torch.stack(list(audio_sources.values())).sum(0)
 
-            convolved_backing_track, ir_info = apply_ir(self.irs, clean_backing_track)
 
-            #find the shortest audio length on dimension 1 and crop all to be at that length. Since all stems are the same size, we just use audio_sources[0]
-            min_length = np.min([targets_list[0].shape[1], convolved_backing_track.shape[1]])
-
-            for i in range(0, len(targets_list)):
-                targets_list[i] = torch.narrow(targets_list[i], 1, 0, min_length)
-            everything_else = torch.narrow(convolved_backing_track, 1, 0, min_length)
-
-            #replace the pre-computed audio_mix with: ir(everything_else) + sum(everything in sources list)
-            #everything_else = torch.tensor(apply_ir(self.irs, clean_backing_track), dtype=torch.float)
-
-            #targets_list is [[]] and everything_else is [], which is why we reshape everything_else below
-            audio_mix = torch.stack(targets_list + [everything_else]).sum(0)
-
-            targets_list.append(everything_else) #everything else added after targets_list is used to calc the mix
-            covered_targets.append('everything_else')
-
-            #now targets_list has each of the targets, and one entry for everything else
-            stacked_targets = torch.stack(targets_list, dim=0)
-
-            # and we can write as:
-            # torchaudio.save('{}.wav'.format(self.targets[0]), sources_list[0], self.sample_rate). etc
-
-            #convolve as follows: audio mix = Room * ( Speaker * everything_else + target instrument )
-
-            #Adding noise as a target will be considered in the future, which would require stacked_audio_sources to include the noise used
-            # to make the mix, and of course would require us to append the noise targets to what is in the conf file.
-
-        return audio_mix, clean_backing_track, stacked_targets, covered_targets, ir_info 
+        return audio_mix, clean_backing_track, audio_sources, targets_list covered_targets 
 
     
     def generate_and_save_all(self):
@@ -196,13 +229,13 @@ class MUSDB18LeakageDataGenerator():
             #torchaudio.save(filepath:'everythingelse.wav', src: stacked_audio_sources[0] , sample_rate: self.sample_rate)
         return
 
-    def get_irs(self):
-        """ Loads the impulse responses. Currently there is nothing random about the ir selection """
+    def get_irs(self, group): 
+        """ Loads the impulse responses based on split and group. Currently there is nothing random about the ir selection """
         irs_df = pd.read_csv(self.ir_paths['irs_metadata'])
         irs_df = irs_df.fillna('')
-
+        
         #get the irs marked relevant to the current split
-        relevant_irs_df = irs_df[irs_df['split'] == self.split]
+        relevant_irs_df = irs_df[(irs_df['split'] == self.split & irs_df['group'] == group)]
 
         for index, ir_row in relevant_irs_df.iterrows():
             #add exception handling here, in case ir_paths doesn't have ir_row['Dataset']
@@ -240,7 +273,7 @@ class MUSDB18LeakageDataGenerator():
 if __name__ == "__main__":
     import yaml
     from asteroid.utils import prepare_parser_from_dict, parse_args_as_dict
-    with open("conf.yml") as f:
+    with open("dataprep.yml") as f:
         def_conf = yaml.safe_load(f)
         parser = prepare_parser_from_dict(def_conf, parser=parser)
 

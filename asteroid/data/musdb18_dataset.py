@@ -13,33 +13,6 @@ import pandas as pd
 import librosa
 import numpy as np
 
-
-def apply_ir(ir_paths, x):
-    #maybe here I should make some choice based on a better random, because this will have the same path everytime
-    # x is from sf.read and not librosa.load, but by the time it gets passed to this function is should have been already transposed and put in torch.audio 
-
-    random_index = random.randint(0, len(ir_paths))
-    ir_path = ir_paths[random_index]
-
-    while(not ir_path.suffixes[-1] == '.wav'): #this could also be causing slowness
-        ir_path = ir_paths[random.randint(0, len(ir_paths))]
-    
-    x_ir, fs = librosa.load(ir_path, sr=44100)
-    fftLength = np.maximum(x.shape[1], len(x_ir))
-    
-    X = signal.stft(x, fs, nperseg)
-    
-    #X = np.fft.fft(x, n=fftLength)
-    #X_ir = np.fft.fft(x_ir, n=fftLength)
-    #x_aug = np.fft.ifft(np.multiply(X_ir, X))[0:x.shape[1]].real
-
-    if np.max(np.abs(x_aug)) == 0:
-        pass
-    else:
-        x_aug = x_aug/np.max(np.abs(x_aug)) #Max Normalize)
-
-    return x_aug.astype(np.float32)
-
 class MUSDB18Dataset(torch.utils.data.Dataset):
     """MUSDB18 music separation dataset
 
@@ -129,7 +102,7 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
         self,
         root,
         ir_paths=None,
-        leakage_removal=False,
+        leakage_removal=False, 
         sources=["vocals", "bass", "drums", "other"],
         targets=None,
         suffix=".wav",
@@ -157,8 +130,7 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
         self.suffix = suffix
         self.subset = subset
         self.samples_per_track = samples_per_track
-        self.tracks = list(self.get_tracks())
-        self.irs = list(self.get_irs())
+        self.tracks = list(self.get_tracks()) #should be updated to retrieve the already created tracks.
         if not self.tracks:
             raise RuntimeError("No tracks found.")
 
@@ -261,46 +233,8 @@ class MUSDB18Dataset(torch.utils.data.Dataset):
 
     def get_tracks(self):
         """Loads input and output tracks"""
-        p = Path(self.root, self.split)
-        for track_path in tqdm.tqdm(p.iterdir()):
-            if track_path.is_dir():
-                if self.subset and track_path.stem not in self.subset:
-                    # skip this track
-                    continue
-
-                source_paths = [track_path / (s + self.suffix) for s in self.sources]
-                if not all(sp.exists() for sp in source_paths):
-                    print("Exclude track due to non-existing source", track_path)
-                    continue
-
-                # get metadata
-                infos = list(map(sf.info, source_paths))
-                if not all(i.samplerate == self.sample_rate for i in infos):
-                    print("Exclude track due to different sample rate ", track_path)
-                    continue
-
-                if self.segment is not None:
-                    # get minimum duration of track
-                    min_duration = min(i.duration for i in infos)
-                    if min_duration > self.segment:
-                        yield ({"path": track_path, "min_duration": min_duration})
-                else:
-                    yield ({"path": track_path, "min_duration": None})
-
-    def get_irs(self):
-        """ Loads the impulse responses. Currently there is nothing random about the ir selection """
-        irs_df = pd.read_csv(self.ir_paths['irs_metadata'])
-        irs_df = irs_df.fillna('')
-
-        #get the irs marked relevant to the current split
-        relevant_irs_df = irs_df[irs_df['split'] == self.split]
-
-        for index, ir_row in relevant_irs_df.iterrows():
-            #add exception handling here, in case ir_paths doesn't have ir_row['Dataset']
-            local_root =  self.ir_paths[ir_row['Dataset']]
-            filepath = Path(local_root, ir_row['relative_path'], ir_row['Filename'])
-            yield (filepath)
-
+        #TODO: make it return the tracks which are in the generated dataset already with leakage and room irs
+        return
 
     def get_infos(self):
         """Get dataset infos (for publishing models).
