@@ -14,7 +14,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from asteroid.engine.system import System
 from asteroid.engine.optimizers import make_optimizer
-from asteroid.models import XUMX
+from asteroid.models import Leakage_XUMX
 from asteroid.models.x_umx import _STFT, _Spectrogram
 from asteroid.losses import singlesrc_mse
 from torch.nn.modules.loss import _Loss
@@ -333,9 +333,14 @@ class XUMXManager(System):
         config=None,
         val_dur=None,
     ):
-        config["data"].pop("sources")
+        #config["data"].pop("sources")
+        #config["data"].pop("source_augmentations")
+        #config["data"].pop("targets")
+
+        config["data"].pop("inputs")
+        config["data"].pop("outputs")
         config["data"].pop("source_augmentations")
-        config["data"].pop("targets")
+
         super().__init__(model, optimizer, loss_func, train_loader, val_loader, scheduler, config)
         self.val_dur_samples = model.sample_rate * val_dur
 
@@ -394,7 +399,7 @@ def main(conf, args):
 
     max_bin = bandwidth_to_max_bin(train_dataset.sample_rate, args.in_chan, args.bandwidth)
 
-    x_unmix = XUMX(
+    x_unmix = Leakage_XUMX(
         window_length=args.window_length,
         input_mean=scaler_mean,
         input_scale=scaler_std,
