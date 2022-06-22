@@ -1,0 +1,44 @@
+To generate the leakage removal dataset, you will need the following files:
+
+
+Even if all the files of such datasets are not available to you, at least check that the subset of files indicated in irs.csv is available to you.
+
+Update the dataprep.yml config file with paths
+
+
+all the code for data generation can be found in dataprep.py.
+
+You can run it through main, or you can launch a python or ipython interpreter from this directory and paste the following:
+
+import argparse
+import yaml
+from pathlib import Path
+
+from dataprep import MUSDBLeakageDataGenerator
+from asteroid.utils import prepare_parser_from_dict, parse_args_as_dict
+
+with open("dataprep.yml") as f:
+	def_conf = yaml.safe_load(f)
+	
+parser = argparse.ArgumentParser()
+
+parser = prepare_parser_from_dict(def_conf, parser=parser)
+arg_dic, plain_args = parse_args_as_dict(parser, return_plain_args=True)
+
+ir_paths = {'irs_metadata': Path(arg_dic['ir_paths']['irs_metadata']), 
+			arg_dic['ir_paths']['irs_1']: Path(arg_dic['ir_paths']['irs_1_dir']),
+			arg_dir['ir_paths']['irs_2']: Path(arg_dic['ir_paths']['ir_2_dir']),
+			arg_dir['ir_paths']['irs_3']: Path(arg_dic['ir_paths']['ir_3_dir'])}
+
+gen = MusDBLeakageDataGenerator(clean_train_data=arg_dic['data']['clean_train_dir'], 
+								clean_test_data=arg_dic['data']['clean_test_dir'],
+								output_train_data=arg_dic['data']['out_train_dir'], 
+								output_test_data=arg_dic['data']['out_test_dir'],
+								ir_paths=ir_paths,
+								sources=arg_dict['data']['sources'],
+								targets=arg_dict['data']['targets']
+								)
+
+gen.generate_and_save_all()
+
+
