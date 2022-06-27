@@ -29,8 +29,8 @@ data:
     leakage_removal: True
     clean_train_dir: ../data/clean/train
     clean_test_dir: ../data/clean/test
-    out_train_dir: ../data/leakage_rm/train
-    out_test_dir: ../data/leakage_rm/test
+    out_train_dir: /media/data/alia/Documents/datasets/leakage_removal/train
+    out_test_dir: /media/data/alia/Documents/datasets/leakage_removal/test
     sources:
     - bass
     - drums
