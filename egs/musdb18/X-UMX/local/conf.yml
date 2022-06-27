@@ -1,6 +1,6 @@
 # Training config
 training:
-  epochs: 2
+  epochs: 1
   batch_size: 14
   loss_combine_sources: no
   loss_use_multidomain: no
@@ -15,8 +15,11 @@ optim:
   lr_decay_gamma: 0.3
   weight_decay: 0.00001
 # Data config. Change values of irs_1_dir and irs_2_dir to your local ones.
+
+#where is the testdir?
 data:
-  train_dir: ./data
+  root: /media/data/alia/Documents/datasets/leakage_removal
+  train_dir: /media/data/alia/Documents/datasets/leakage_removal/train
   irs_metadata: /home/alia/Documents/projects/leakage_removal/asteroid/egs/musdb18/X-UMX/local/irs.csv
   output: x-umx_outputs
   irs_1: Aachen Impulse Response Dataset
@@ -32,15 +35,14 @@ data:
     - gain
     - channelswap
   leakage_removal: True
-  sources:
-    - bass
-    - drums
-    - vocals
-    - other
+  inputs:
+    - clean_backing_track
+    - degraded_audio_mix
+
 # Should we train one target at a time, or train all the models together (i.e vocals + everything else, guitar + everything else, etc)
-  targets:
-    - drums
-    - everything
+  outputs:
+    - degraded_instrument_track
+    - degraded_backing_track
 
 # Network config
 model:

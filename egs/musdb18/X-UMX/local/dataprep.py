@@ -121,7 +121,7 @@ class MUSDB18LeakageDataGenerator():
         suffix=".wav",
         samples_per_track=1,
         random_segments=False,
-        split='train',
+        split='test',
         random_track_mix=False,
         sample_rate=44100,
         room_factory=None
@@ -257,7 +257,7 @@ class MUSDB18LeakageDataGenerator():
                 print('{} - {}'.format(songname, i))
                 r = self.room_factory.create_room()
                 #pdb.set_trace()    
-                os.makedirs(os.path.join(outdir, target_str, songname, str(i)), exist_ok=True)
+                os.makedirs(os.path.join(outdir, self.targets[0], songname, str(i)), exist_ok=True)
                 r.add_instrument_track(targets_list[0])
                 r.add_backing_track(torch.stack(list(audio_sources.values())).sum(0))
                 
@@ -306,18 +306,20 @@ class MUSDB18LeakageDataGenerator():
                 outputs = {key: value for (key, value) in zip(covered_targets, targets_list)}
                 outputs['degraded_backing_track'] = degraded_backing_track
                 outputs['degraded_instrument_track'] = degraded_instrument_track
-            
+           
+                # should write to folder target_str instead of self.targets[0], but currently there
+                # is a little bug.
                 for key, val in inputs.items():
-                    torchaudio.save(os.path.join(outdir, target_str, songname, str(i), '{}.wav'.format(key)), val, self.sample_rate)
+                    torchaudio.save(os.path.join(outdir, self.targets[0], songname, str(i), '{}.wav'.format(key)), val, self.sample_rate)
 
                 for key, val in outputs.items():
-                    torchaudio.save(os.path.join(outdir, target_str, songname, str(i), '{}.wav'.format(key)), val, self.sample_rate)
+                    torchaudio.save(os.path.join(outdir, self.targets[0], songname, str(i), '{}.wav'.format(key)), val, self.sample_rate)
 
                 #columns.extend(['songname', 'variant'])
                 #params_df = pd.DataFrame(columns=columns)
                 
             #keep writing in every forloop because we want to see intermediary results anyway
-            params_df.to_csv(os.path.join(outdir, target_str, 'room_params.csv'))
+            params_df.to_csv(os.path.join(outdir, self.targets[0], 'room_params.csv'))
 
         #for track in self.tracks:
             # check the targets, and create a dataset for them

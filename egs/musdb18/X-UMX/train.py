@@ -15,7 +15,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from asteroid.engine.system import System
 from asteroid.engine.optimizers import make_optimizer
 from asteroid.models import Leakage_XUMX
-from asteroid.models.x_umx import _STFT, _Spectrogram
+from asteroid.models.leakage_xumx import _STFT, _Spectrogram
 from asteroid.losses import singlesrc_mse
 from torch.nn.modules.loss import _Loss
 from torch import nn
@@ -62,7 +62,8 @@ def get_statistics(args, dataset):
     std = np.maximum(scaler.scale_, 1e-4 * np.max(scaler.scale_))
     return scaler.mean_, std
 
-
+#s hat expects the estimated outputs stacked. 
+#where is the gt_spec obtained from?
 def freq_domain_loss(s_hat, gt_spec, combination=True):
     """Calculate frequency-domain loss between estimated and reference spectrograms.
     MSE between target and estimated target spectrograms is adopted as frequency-domain loss.
@@ -407,7 +408,7 @@ def main(conf, args):
         hidden_size=args.hidden_size,
         in_chan=args.in_chan,
         n_hop=args.nhop,
-        sources=args.targets,
+        outputs=args.outputs,
         max_bin=max_bin,
         bidirectional=args.bidirectional,
         sample_rate=train_dataset.sample_rate,
@@ -425,9 +426,9 @@ def main(conf, args):
     )
 
     # Save config
-    conf_path = os.path.join(exp_dir, "conf.yml")
-    with open(conf_path, "w") as outfile:
-        yaml.safe_dump(conf, outfile)
+    #conf_path = os.path.join(exp_dir, "conf.yml")
+    #with open(conf_path, "w") as outfile:
+    #    yaml.safe_dump(conf, outfile)
 
     es = EarlyStopping(monitor="val_loss", mode="min", patience=args.patience, verbose=True)
 

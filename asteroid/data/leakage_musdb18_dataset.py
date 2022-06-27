@@ -190,13 +190,34 @@ class Leakage_MUSDB18Dataset(torch.utils.data.Dataset):
                 stop=stop_sample,
             )
             audio = torch.tensor(audio.T, dtype=torch.float)
-            model_outputs[model_output] = audio            
+            model_outputs[model_output] = audio
 
+        #just for now, remove the clean backing track from the model inputs
+        model_inputs.pop('clean_backing_track')
 
-        stacked_inputs = torch.stack(model_inputs, dim=0)
-        stacked_outputs = torch.stack(model_outputs, dim=0)
-            
-        return stacked_inputs, stacked_outputs
+        #cut all the audio files to the same length, since unf. I forgot to do that when making the dataset..
+        all_audios = list(model_inputs.values()) + list(model_outputs.values())
+ 
+        shortest = np.min([t.shape[1] for t in all_audios]) #since we are assuming stereo audio, so the audio length is on the second dim.
+
+        for key, val in model_inputs.items():
+            model_inputs[key] = torch.narrow(val, 1, 0, shortest) 
+
+        for key, val in model_outputs.items():
+            model_outputs[key] = torch.narrow(val, 1, 0, shortest)
+
+        #Since the first attempt will be without the clean backing track, we will just remove the extra input..
+        # clean backing track, then degraded audio mix
+        stacked_inputs = torch.stack(list(model_inputs.values()), dim=0)
+        # degraded instrument track, degraded backing track
+        stacked_outputs = torch.stack(list(model_outputs.values()), dim=0)
+    
+        #import pdb
+        #pdb.set_trace()
+
+        # for now, just return the input as is without stacking 
+        return model_inputs['degraded_audio_mix'], stacked_outputs
+        #return stacked_inputs, stacked_outputs
 
     def __len__(self):
         return len(self.tracks) * self.samples_per_track
@@ -212,12 +233,12 @@ class Leakage_MUSDB18Dataset(torch.utils.data.Dataset):
  
         for track_path in tqdm.tqdm(all_dirs): 
             if track_path.is_dir():
-                if self.subset and track_path.stem not in self.subset:
+                if self.subset and track_path.parent.stem not in self.subset:
                     continue #skip track
 
                 #check the inputs and outputs to the model
                 ios = ['degraded_audio_mix', 'clean_backing_track', 'degraded_backing_track', 'degraded_instrument_track']
-                source_paths = [track_path / (s + self.suffix) for s in self.ios]
+                source_paths = [track_path / (s + self.suffix) for s in ios]
                 if not all(sp.exists() for sp in source_paths):
                     print("Exclude track due to missing input or output file")
 

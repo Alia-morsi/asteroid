@@ -9,7 +9,7 @@ from .dptnet import DPTNet
 from .lstm_tasnet import LSTMTasNet
 from .demask import DeMask
 from .x_umx import XUMX
-from .leakag_xumx import Leakage_XUMX
+from .leakage_xumx import Leakage_XUMX
 
 # Sharing-related
 from .publisher import save_publishable, upload_publishable

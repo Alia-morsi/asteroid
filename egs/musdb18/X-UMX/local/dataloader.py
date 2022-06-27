@@ -1,4 +1,4 @@
-from asteroid.data import MUSDB18Dataset
+from asteroid.data import Leakage_MUSDB18Dataset
 import torch
 from pathlib import Path
 
@@ -30,21 +30,22 @@ def load_datasets(parser, args):
     args = parser.parse_args()
 
     dataset_kwargs = {
-        "root": Path(args.train_dir),
+        "root": Path(args.root),
     }
 
-    if args.leakage_removal:
-        dataset_kwargs['ir_paths'] = {'irs_metadata': Path(args.irs_metadata), args.irs_1: Path(args.irs_1_dir), args.irs_2: Path(args.irs_2_dir)}
-        dataset_kwargs['leakage_removal'] = True
+    #if args.leakage_removal:
+    #    dataset_kwargs['ir_paths'] = {'irs_metadata': Path(args.irs_metadata), args.irs_1: Path(args.irs_1_dir), args.irs_2: Path(args.irs_2_dir)}
+    #    dataset_kwargs['leakage_removal'] = True
 
     source_augmentations = Compose(
         [globals()["_augment_" + aug] for aug in args.source_augmentations]
     )
 
-    train_dataset = MUSDB18Dataset(
+    train_dataset = Leakage_MUSDB18Dataset(
+        #root=args.root,
         split="train",
-        sources=args.sources,
-        targets=args.targets,
+        inputs=args.inputs,
+        outputs=args.outputs,
         source_augmentations=source_augmentations,
         random_track_mix=True,
         segment=args.seq_dur,
@@ -55,11 +56,12 @@ def load_datasets(parser, args):
     )
     train_dataset = filtering_out_valid(train_dataset)
 
-    valid_dataset = MUSDB18Dataset(
+    valid_dataset = Leakage_MUSDB18Dataset(
+        #root=args.root,
         split="train",
         subset=validation_tracks,
-        sources=args.sources,
-        targets=args.targets,
+        inputs=args.inputs,
+        outputs=args.outputs,
         segment=None,
         **dataset_kwargs,
     )
@@ -96,6 +98,7 @@ class Compose(object):
             audio = transform(audio)
         return audio
 
+#does augment Snr also make sense to be added here
 
 def _augment_gain(audio, low=0.25, high=1.25):
     """Applies a random gain to each source between `low` and `high`"""
