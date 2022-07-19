@@ -8,7 +8,7 @@ import norbert
 from pathlib import Path
 import scipy.signal
 import resampy
-from asteroid.models import XUMX
+from asteroid.models import Leakage_XUMX
 from asteroid.complex_nn import torch_complex_from_magphase
 import os
 import warnings
@@ -17,10 +17,10 @@ import sys
 
 def load_model(model_name, device="cpu"):
     print("Loading model from: {}".format(model_name), file=sys.stderr)
-    model = XUMX.from_pretrained(model_name)
+    model = Leakage_XUMX.from_pretrained(model_name)
     model.eval()
     model.to(device)
-    return model, model.sources
+    return model, model.outputs
 
 
 def istft(X, rate=44100, n_fft=4096, n_hopsize=1024):
