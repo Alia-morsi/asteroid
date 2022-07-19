@@ -239,7 +239,7 @@ class Leakage_XUMX(BaseModel):
         }
 
         net_config = {
-            "sources": self.outputs,
+            "outputs": self.outputs,
             "hidden_size": self.hidden_size,
             "nb_channels": self.nb_channels,
             "input_mean": None,
