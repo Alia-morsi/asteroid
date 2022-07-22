@@ -8,7 +8,7 @@ import norbert
 from pathlib import Path
 import scipy.signal
 import resampy
-from asteroid.models import XUMX
+from asteroid.models import Leakage_XUMX
 from asteroid.complex_nn import torch_complex_from_magphase
 import os
 import warnings
