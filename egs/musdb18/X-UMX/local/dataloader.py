@@ -2,6 +2,17 @@ from asteroid.data import Leakage_MUSDB18Dataset
 import torch
 from pathlib import Path
 
+toy_train_tracks = [
+    "Johnny Lokke - Promises & Lies",
+    "Patrick Talbot - A Reason To Leave",
+    "Triviul - Angelsaint",
+    "Alexander Ross - Goodbye Bolero",
+    "Fergessen - Nos Palpitants",
+    "Leaf - Summerghost"
+    ]
+
+toy_valid_tracks = toy_train_tracks[0:2]
+
 validation_tracks = [
     "Actions - One Minute Smile",
     "Clara Berry And Wooldog - Waltz For My Victims",
@@ -41,30 +52,59 @@ def load_datasets(parser, args):
         [globals()["_augment_" + aug] for aug in args.source_augmentations]
     )
 
-    train_dataset = Leakage_MUSDB18Dataset(
-        #root=args.root,
-        split="train",
-        inputs=args.inputs,
-        outputs=args.outputs,
-        source_augmentations=source_augmentations,
-        random_track_mix=True,
-        segment=args.seq_dur,
-        random_segments=True,
-        sample_rate=args.sample_rate,
-        samples_per_track=args.samples_per_track,
-        **dataset_kwargs,
-    )
-    train_dataset = filtering_out_valid(train_dataset)
+    if args.toy_run == True:
+        train_dataset = Leakage_MUSDB18Dataset(
+            #root=args.root,
+            split="train",
+            subset=toy_train_tracks, 
+            inputs=args.inputs,
+            outputs=args.outputs,
+            source_augmentations=source_augmentations,
+            random_track_mix=True,
+            segment=args.seq_dur,
+            random_segments=True,
+            sample_rate=args.sample_rate,
+            samples_per_track=args.samples_per_track,
+            **dataset_kwargs,
+        )
+        train_dataset = filtering_out_valid_toy(train_dataset)
 
-    valid_dataset = Leakage_MUSDB18Dataset(
-        #root=args.root,
-        split="train",
-        subset=validation_tracks,
-        inputs=args.inputs,
-        outputs=args.outputs,
-        segment=None,
-        **dataset_kwargs,
-    )
+        valid_dataset = Leakage_MUSDB18Dataset(
+            #root=args.root,
+            split="train",
+            subset=toy_valid_tracks,
+            inputs=args.inputs,
+            outputs=args.outputs,
+            segment=None,
+            **dataset_kwargs,
+        )
+ 
+
+    else:
+        train_dataset = Leakage_MUSDB18Dataset(
+            #root=args.root,
+            split="train",
+            inputs=args.inputs,
+            outputs=args.outputs,
+            source_augmentations=source_augmentations,
+            random_track_mix=True,
+            segment=args.seq_dur,
+            random_segments=True,
+            sample_rate=args.sample_rate,
+            samples_per_track=args.samples_per_track,
+            **dataset_kwargs,
+        )
+        train_dataset = filtering_out_valid(train_dataset)
+
+        valid_dataset = Leakage_MUSDB18Dataset(
+            #root=args.root,
+            split="train",
+            subset=validation_tracks,
+            inputs=args.inputs,
+            outputs=args.outputs,
+            segment=None,
+            **dataset_kwargs,
+        )
 
     return train_dataset, valid_dataset
 
@@ -83,6 +123,14 @@ def filtering_out_valid(input_dataset):
 
     return input_dataset
 
+def filtering_out_valid_toy(input_dataset):
+    input_dataset.tracks = [
+        tmp
+        for tmp in input_dataset.tracks
+        if not (str(tmp["path"]).split("/")[-1] in toy_valid_tracks)
+    ]
+
+    return input_dataset
 
 class Compose(object):
     """Composes several augmentation transforms.
