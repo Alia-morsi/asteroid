@@ -184,7 +184,7 @@ class Leakage_MUSDB18Dataset(torch.utils.data.Dataset):
 
         for model_output in self.outputs:
             audio, _ = sf.read(
-                Path(self.tracks[track_id]["path"] / model_input).with_suffix(self.suffix),
+                Path(self.tracks[track_id]["path"] / model_output).with_suffix(self.suffix),
                 always_2d=True,
                 start=start_sample,
                 stop=stop_sample,
@@ -211,9 +211,6 @@ class Leakage_MUSDB18Dataset(torch.utils.data.Dataset):
         stacked_inputs = torch.stack(list(model_inputs.values()), dim=0)
         # degraded instrument track, degraded backing track
         stacked_outputs = torch.stack(list(model_outputs.values()), dim=0)
-    
-        #import pdb
-        #pdb.set_trace()
 
         # for now, just return the input as is without stacking 
         return model_inputs['degraded_audio_mix'], stacked_outputs
